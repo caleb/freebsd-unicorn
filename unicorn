@@ -1,0 +1,303 @@
+#!/bin/sh
+
+# PROVIDE: unicorn
+# REQUIRE: LOGIN postgresql
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="unicorn"
+rcvar=`set_rcvar`
+procname="ruby"
+
+extra_commands="upgrade show reopenlogs"
+start_cmd="unicorn_start_command"
+upgrade_cmd="unicorn_upgrade_command"
+show_cmd="unicorn_show_command"
+reopenlogs_cmd="unicorn_reopenlogs_command"
+
+load_rc_config "${name}"
+
+: ${unicorn_enable:="NO"}
+: ${unicorn_flags:="-D"}
+: ${unicorn_env:="production"}
+: ${unicorn_init_config:=""}
+: ${unicorn_bundle_gemfile:=""}
+: ${unicorn_profiles:=""}
+: ${unicorn_upgrade_timeout:="60"}
+: ${unicorn_rc_script:="/usr/local/etc/rc.d/unicorn"}
+
+#
+# Convenience function to read a profile's environment variable, or fall back to a default
+#
+# e.x. _read_profile_var my_app pidfile '/u/my_app/shard/pids/unicorn.pid'
+#
+_read_profile_var()
+{
+  profile=$1
+  var=$2
+  default=$3
+  default2=$4
+  eval value="\${unicorn_${profile}_${var}:-${default}}"
+  eval value="\${value:-${default2}}"
+  echo "${value}"
+}
+
+#
+# Takes a directory and sets up some default environement variables based on a capistrano layout
+#
+_setup_directory()
+{
+  local directory
+  directory=$1
+  
+  directory_command="${directory}/current/bin/unicorn_rails"
+  directory_pidfile="${directory}/shared/pids/unicorn.pid"
+  directory_old_pidfile="${directory_pidfile}.oldbin"
+  directory_config="${directory}/current/config/unicorn.conf.rb"
+  directory_rackup="${directory}/current/config.ru"
+  directory_init_config="${directory}/current/.env"
+  directory_bundle_gemfile="${directory}/current/Gemfile"
+  directory_chdir="${directory}/current"
+
+  # only use the directory_init_config if it exists
+  if [ ! -f "${directory_init_config}" ]; then
+    unset directory_init_config
+  fi
+
+  # only use the bundle_gemfile if it exists
+  if [ ! -f "${directory_bundle_gemfile}" ]; then
+    unset directory_bundle_gemfile
+  fi
+
+  if [ -f "${directory_config}" ]; then
+    directory_user=`stat -f "%Su" "${directory_config}"` # default to the owner of the config file
+  fi
+}
+
+#
+# If we have a profile, set up the environment for that profile
+#
+if [ -n "$2" ]; then
+  profile="$2"
+
+  # set the rcvar for this specific profile
+  rcvar=`set_rcvar "${name}_${profile}"`
+  # if the user provides a directory, we can infer some default configuration
+  directory=`_read_profile_var "${profile}" "directory"`
+
+  if [ -n "${directory}" ]; then
+    _setup_directory "${directory}"
+  fi
+
+  unicorn_rackup=`        _read_profile_var "${profile}" "rackup"         "${directory_rackup}"`
+  unicorn_old_pidfile=`   _read_profile_var "${profile}" "old_pidfile"    "${directory_old_pidfile}"`
+  unicorn_config=`        _read_profile_var "${profile}" "config"         "${directory_config}"`
+  unicorn_init_config=`   _read_profile_var "${profile}" "init_config"    "${directory_init_config}"`
+  unicorn_bundle_gemfile=`_read_profile_var "${profile}" "bundle_gemfile" "${directory_bundle_gemfile}"`
+  unicorn_chdir=`         _read_profile_var "${profile}" "chdir"          "${directory_chdir}"`
+  unicorn_listen=`        _read_profile_var "${profile}" "listen"         "${unicorn_listen}"`
+  unicorn_user=`          _read_profile_var "${profile}" "user"           "${unicorn_user}"           "${directory_user}"`
+  unicorn_nice=`          _read_profile_var "${profile}" "nice"           "${unicorn_nice}"`
+  unicorn_env=`           _read_profile_var "${profile}" "env"            "${unicorn_env}"`
+  unicorn_flags=`         _read_profile_var "${profile}" "flags"          "${unicorn_flags}"`
+
+  command=`_read_profile_var "${profile}" "command"     "${unicorn_command}"       "${directory_command}"`
+  pidfile=`_read_profile_var "${profile}" "pidfile"     "${directory_pidfile}"`
+else
+  if [ "x${unicorn_profiles}" != "x" -a "x$1" != "x" ]; then
+    # If we weren't started with a profile, run the command on all available profiles
+    for profile in ${unicorn_profiles}; do
+      # By default set the profile rcvar to no to suppress warnings by checkyesno
+      profile_rcvar=`set_rcvar "${name}_${profile}"`
+      eval "${profile_rcvar}=\${${profile_rcvar}:-'NO'}"
+
+      if checkyesno ${profile_rcvar}; then
+        echo "Running ${1} on ${profile}"
+        ${unicorn_rc_script} $1 $profile
+      else
+        echo "Skipping ${profile}"
+
+        # Unset the variable and then checkyesno again to print the warning
+        eval "unset ${profile_rcvar}"
+        checkyesno ${profile_rcvar}
+      fi
+      echo
+    done
+    exit 0
+  else
+    # look for a profile-less configuration
+
+    # if the user provides a directory, we can infer some default configuration
+    directory=${unicorn_directory:-}
+
+    if [ -n "${directory}" ]; then
+      _setup_directory "${directory}"
+    fi
+
+    unicorn_rackup=${unicorn_rackup:-$directory_rackup}
+    unicorn_old_pidfile=${unicorn_old_pidfile:-$directory_old_pidfile}
+    unicorn_chdir=${unicorn_chdir:-$directory_chdir}
+    unicorn_user=${unicorn_user:-$directory_user}
+    unicorn_config=${unicorn_config:-$directory_config}
+    unicorn_init_config=${unicorn_init_config:-$directory_init_config}
+    unicorn_bundle_gemfile=${unicorn_bundle_gemfile:-$directory_bundle_gemfile}
+
+    command=${unicorn_command:-$directory_command}
+    pidfile=${unicorn_pidfile:-$directory_pidfile}
+  fi
+fi
+
+# add the directory as a required directory, if it's specified
+required_dirs="${directory:-}"
+
+# if we have a config file or rackup file specified, make sure it exists
+required_files="${unicorn_config:-} ${unicorn_rackup:-}"
+
+#
+# Build up the flags based on the environment variables
+#
+[ -n "${unicorn_listen}" ] && unicorn_flags="-l ${unicorn_listen} ${unicorn_flags}"
+[ -n "${unicorn_config}" ] && unicorn_flags="-c ${unicorn_config} ${unicorn_flags}"
+[ -n "${unicorn_env}" ] && unicorn_flags="-E ${unicorn_env} ${unicorn_flags}"
+
+# Add our rackup file to the unicorn command_args
+[ -n "${unicorn_rackup:-}" ] && command_args="${unicorn_rackup:-}"
+
+# This function builds the command to start unicorn. This is split out so we can
+# print it from the "show" command
+_unicorn_start_command()
+{
+  local shell_command
+  shell_command="${unicorn_bundle_gemfile:+export BUNDLE_GEMFILE=$unicorn_bundle_gemfile && }"\
+"${unicorn_init_config:+. $unicorn_init_config && }"\
+"${unicorn_chdir:+cd $unicorn_chdir && }"\
+"${unicorn_nice:+nice -n $unicorn_nice }"\
+"${command} ${rc_flags} ${command_args}"
+
+  if [ -n "${unicorn_user}" ]; then
+    echo "su -l ${unicorn_user} -c \"${shell_command}\""
+  else
+    echo "sh -c \"${shell_command}\""
+  fi
+}
+
+#
+# The start command
+#
+unicorn_start_command()
+{
+  # ensure unicorn isn't already running
+  if [ -z "$rc_fast" -a -n "$rc_pid" ]; then
+    echo 1>&2 "${name} already running? (pid=$rc_pid)."
+    return 1
+  fi
+
+  # ensure that the command exists and is executable
+  if [ ! -x ${_chroot}${_chroot:+"/"}${command} ]; then
+    warn "run_rc_command: cannot run $command"
+    return 1
+  fi
+
+  check_startmsgs && echo "Starting ${name}: ${profile}."
+
+  eval "$(_unicorn_start_command)"
+  _return=$?
+
+  if [ $_return -ne 0 ] && [ -z "${rc_force}" ]; then
+    return 1
+  fi
+
+  return 0
+}
+
+unicorn_upgrade_command()
+{
+  if [ -n "${rc_pid}" ]; then
+    # Tell the master to spawn a new version of itself
+    if kill -USR2 "${rc_pid}"; then
+      n=$unicorn_upgrade_timeout
+
+      # Wait until the unicorn_old_pidfile and pidfile both exist and are non-empty
+      echo -n >&2 "Waiting for the new master to spawn"
+      while [ \( ! -s "${unicorn_old_pidfile}" -o ! -s "${pidfile}" \) -a $n -ge 0 ]; do
+        printf >&2 '.' && sleep 1 && n=$(( $n-1 ))
+      done
+      echo
+
+      # if the pidfile or unicorn_old_pidfile still don't exist, quit
+      if [ ! -s "${pidfile}" -o ! -s "${unicorn_old_pidfile}" ]; then
+        [ ! -s "${pidfile}" ]              && echo >&2 "${pidfile} doesn't exist after ${unicorn_upgrade_timeout} seconds"
+        [ ! -s "${punicorn_old_pidfile}" ] && echo >&2 "${unicorn_old_pidfile} doesn't exist after ${unicorn_upgrade_timeout} seconds"
+        return 1
+      fi
+
+      # make sure the new master can receive signals, and then QUIT the old one
+      echo >&2 "Killing the old master"
+      kill -0 `check_pidfile "${pidfile}" "${procname}"` && kill -QUIT `check_pidfile "${unicorn_old_pidfile}" "${procname}"`
+
+      # Wait for the old master to die
+      echo -n >&2 "Waiting for the old master to cleanup"
+      while [ -s "${unicorn_old_pidfile}" -a $n -ge 0 ]; do
+        printf >&2 '.' && sleep 1 && n=$(( $n-1 ))
+      done
+      echo
+
+      # If the old master is still around, print that fact and exit with an error
+      if [ -s "${unicorn_old_pidfile}" -a $n -lt 0 ]; then
+        echo >&2 "${unicorn_old_pidfile} still exists after ${unicorn_upgrade_timeout} seconds"
+        return 1
+      fi
+
+      # everything worked, return success
+      return 0
+    fi
+
+    # If there isn't a pid in rc_pid, just run the start command
+    echo >&2 "Couldn't upgrade, running `start` instead"
+    $0 start "${2}"
+  fi
+}
+
+#
+# Prints the configuration for the given profile
+#
+unicorn_show_command()
+{
+  if [ -n "${profile}" ]; then
+    banner="Unicorn Configuration for ${profile}"
+  else
+    banner="Unicorn Configuration"
+  fi
+
+  echo "
+#
+# ${banner}
+#
+
+command:        ${command}
+command_args:   ${command_args}
+pidfile:        ${pidfile}
+old_pidfile:    ${unicorn_old_pidfile}
+listen:         ${unicorn_listen}
+config:         ${unicorn_config}
+init_config:    ${unicorn_init_config}
+bundle_gemfile: ${unicorn_bundle_gemfile}
+chdir:          ${unicorn_chdir}
+user:           ${unicorn_user}
+nice:           ${unicorn_nice}
+env:            ${unicorn_env}
+flags:          ${unicorn_flags}
+
+start_command:
+
+$(_unicorn_start_command)
+"
+}
+
+unicorn_reopenlogs_command()
+{
+  [ -n "${rc_pid}" ] && kill -USR1 $rc_pid
+}
+
+run_rc_command "${1}"
