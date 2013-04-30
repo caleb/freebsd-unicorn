@@ -12,7 +12,7 @@ This has been tested on **FreeBSD 9.0 and 9.1**
 
 ## Make sure unicorn starts after your database launches!
 
-The only thing you might need to configure in the rc script is to change the `REQUIRES` line to specify your database (I use PostreSQL so that's what's in the repo)
+The only thing you might need to configure in the rc script is to change the `REQUIRE` line to specify your database (I use PostreSQL so that's what's in the repo)
 
 For example, if you were using MySQL, you would change
 
@@ -27,7 +27,7 @@ You might need to add other services to this list if your Rails application requ
 
 ## Quick Setup
 
-To get up and running quickly, adjust the `REQUIRES` line like above, and add edit your `/etc/rc.conf`:
+To get up and running quickly, adjust the `REQUIRE` line like above, and add edit your `/etc/rc.conf`:
 
 For Capistrano or Capistrano-like directory layouts:
 
