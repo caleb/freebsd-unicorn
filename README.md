@@ -1,5 +1,5 @@
-freebsd-unicorn
-===============
+# freebsd-unicorn
+
 
 A robust init script for running unicorn on FreeBSD
 
@@ -9,8 +9,8 @@ Simply place the `unicorn` script in your `/usr/local/etc/rc.d` directory, modif
 
 This has been tested on **FreeBSD 9.0 and 9.1**
 
-Making sure unicorn starts after your database launches
--------------------------------------------------------
+
+## Make sure unicorn starts after your database launches!
 
 The only thing you might need to configure in the rc script is to change the `REQUIRES` line to specify your database (I use PostreSQL so that's what's in the repo)
 
@@ -23,6 +23,7 @@ to
     # REQUIRE: LOGIN mysql-server
 
 You might need to add other services to this list if your Rails application requires them.
+
 
 ### Quick Setup
 
@@ -51,14 +52,34 @@ For Non-Capistrano-like layouts:
 
     # Uncomment this if using a different RAILS_ENV/RACK_ENV than production
     #unicorn_env="production"
-    
 
-Edit `/etc/rc.conf` to meet your needs
--------------------------------------------
+
+### Starting/Stopping/Restarting and Upgrading Unicorn
+
+You can now start Unicorn like any other FreeBSD service:
+
+    /usr/local/etc/rc.d/unicorn start
+
+There's also a handy `show` command to look at your final Unicorn configuration:
+
+    /usr/local/etc/rc.d/unicorn show
+
+You can do an old-fashioned restart, or a [zero-downtime upgrade][unicorn-0-downtime] with these commands:
+
+    /usr/local/etc/rc.d/unicorn restart
+    /usr/local/etc/rc.d/unicorn upgrade
+
+And when you're done riding Unicorns, you can shut it down
+
+    /usr/local/etc/rc.d/unicorn stop
+
+
+## Edit `/etc/rc.conf` to meet your needs
+
 
 ### Using a Capistrano directory layout
 
-The rc script does as much as possible to help you out. If you are using capistrano, or a capistrano-like directory structure, then you can just specify the directory of your application (the parent directory of `current`):
+The rc script does as much as possible to help you out. If you are using Capistrano, or a Capistrano-like directory structure, then you can just specify the directory of your application (the parent directory of `current`):
 
     unicorn_enable="YES"
     unicorn_directory="/u/application"
