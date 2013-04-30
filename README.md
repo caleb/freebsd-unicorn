@@ -25,7 +25,7 @@ to
 You might need to add other services to this list if your Rails application requires them.
 
 
-### Quick Setup
+## Quick Setup
 
 To get up and running quickly, adjust the `REQUIRES` line like above, and add edit your `/etc/rc.conf`:
 
@@ -54,7 +54,7 @@ For Non-Capistrano-like layouts:
     #unicorn_env="production"
 
 
-### Starting/Stopping/Restarting and Upgrading Unicorn
+## Starting/Stopping/Restarting and Upgrading Unicorn
 
 You can now start Unicorn like any other FreeBSD service:
 
@@ -74,7 +74,7 @@ And when you're done riding Unicorns, you can shut it down
     /usr/local/etc/rc.d/unicorn stop
 
 
-## Edit `/etc/rc.conf` to meet your needs
+## `/etc/rc.conf` Details
 
 
 ### Using a Capistrano directory layout
