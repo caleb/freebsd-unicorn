@@ -33,8 +33,8 @@ For Capistrano or Capistrano-like directory layouts:
 
     unicorn_enable="YES"
 
-    # this is the path to where your application is deployed in Capistrano,
-    # the parent directory of the `current` directory
+    # this is the path to where your application is deployed via Capistrano
+    # (the parent directory of the `current` directory)
     unicorn_directory="/u/application"
 
 
