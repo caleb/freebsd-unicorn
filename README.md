@@ -202,8 +202,8 @@ If you use a different deployment strategy than Capistrano, you could adjust the
 
 
 
-passenger: https://www.phusionpassenger.com
-unicorn-sandboxing: http://unicorn.bogomips.org/Sandbox.html
-dotenv: https://github.com/bkeepers/dotenv
-unicorn-0-downtime: http://unicorn.bogomips.org/SIGNALS.html
-binstub: https://github.com/sstephenson/rbenv/wiki/Understanding-binstubs
+[passenger]: https://www.phusionpassenger.com
+[unicorn-sandboxing]: http://unicorn.bogomips.org/Sandbox.html
+[dotenv]: https://github.com/bkeepers/dotenv
+[unicorn-0-downtime]: http://unicorn.bogomips.org/SIGNALS.html
+[binstub]: https://github.com/sstephenson/rbenv/wiki/Understanding-binstubs
