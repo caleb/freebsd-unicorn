@@ -42,7 +42,7 @@ For Non-Capistrano-like layouts:
 
     unicorn_enable="YES"
     unicorn_command="/u/application/bin/unicorn_rails"
-    unicorn_command_args="/u/application/config.ru"
+    unicorn_rackup="/u/application/config.ru"
     unicorn_pidfile="/u/application/tmp/pids/unicorn.pid"
     unicorn_old_pidfile="/u/application/tmp/pids/unicorn.oldbin"
     unicorn_listen="/u/application/tmp/sockets/unicorn.sock"
@@ -92,6 +92,7 @@ This infers all sorts of information about your app (you can always run `/usr/lo
 
     command:        /u/application/current/bin/unicorn_rails
     command_args:   /u/application/current/config.ru
+    rackup:         /u/application/current/config.ru
     pidfile:        /u/application/shared/pids/unicorn.pid
     old_pidfile:    /u/application/shared/pids/unicorn.pid.oldbin
     listen:         
@@ -112,7 +113,9 @@ Let's look at these settings one by one:
 
 `command`: By default, it uses the `current/bin/unicorn_rails` [bundler binstub][binstub] located in your project to ensure your gems are loaded. `command` comes from FreeBSD's `rc.subr` init system functions.
 
-`command_args`: This is the standard FreeBSD's `rc.subr` variable that holds the arguments to the above `command`
+`command_args`: This is the standard FreeBSD's `rc.subr` variable that holds the arguments to the above `command`. The `rackup` setting is prepended to the beginning of this setting. Typically you don't need to set this.
+
+`rackup`: This is the `rackup` file that unicorn uses. By default this is set to `current/config.ru` for capistrano projects.
 
 `pidfile`: This is also part of FreeBSD's `rc.subr` system. This is where the built in functions will look for the pid of the process. By default, this rc script looks in the `shared/pids/unicorn.pid` file.
 
@@ -155,7 +158,8 @@ You can override any of these parameter in your `/etc/rc.conf` by simply specify
 Using your own layout is easy, you can just leave the `unicorn_directory` variable out of your `/etc/rc.conf` and specify all of the above variables manually. Here's a list of those variables for your convenience:
 
     unicorn_command:      The path to the unicorn command
-    unicorn_command_args: The non-flag arguments passed to the above command. This is usually the path to the Rack config.ru file
+    unicorn_command_args: The non-flag arguments passed to the above command. This is usually the path to the Rack config.ru file, and the rackup parameter is prepended to the beginning of this setting. Typically you do not need to set this.
+    unicorn_rackup:       This is the path to the Rack config file (typically called `config.ru`). This setting is prepended to the `command_args` parameter
     unicorn_pidfile:      The path where Unicorn will put its pid file
     unicorn_old_pidfile:  The path where Unicorn will put its `old` pid file (usually the same as the sbove with `.oldbin` appended)
     unicorn_listen:       The path to the socket or port to listen on. You can leave this blank to specify where to listen in the Unicorn config

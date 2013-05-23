@@ -102,8 +102,9 @@ if [ -n "$2" ]; then
   unicorn_env=`           _read_profile_var "${profile}" "env"            "${unicorn_env}"`
   unicorn_flags=`         _read_profile_var "${profile}" "flags"          "${unicorn_flags}"`
 
-  command=`_read_profile_var "${profile}" "command"     "${unicorn_command}"       "${directory_command}"`
-  pidfile=`_read_profile_var "${profile}" "pidfile"     "${directory_pidfile}"`
+  command=`_read_profile_var "${profile}"      "command"      "${unicorn_command}"      "${directory_command}"`
+  command_args=`_read_profile_var "${profile}" "command_args" "${unicorn_command_args}" "${directory_command_args}"`
+  pidfile=`_read_profile_var "${profile}"      "pidfile"      "${directory_pidfile}"`
 else
   if [ "x${unicorn_profiles}" != "x" -a "x$1" != "x" ]; then
     # If we weren't started with a profile, run the command on all available profiles
@@ -138,12 +139,14 @@ else
     unicorn_rackup=${unicorn_rackup:-$directory_rackup}
     unicorn_old_pidfile=${unicorn_old_pidfile:-$directory_old_pidfile}
     unicorn_chdir=${unicorn_chdir:-$directory_chdir}
+    unicorn_rackup=${unicorn_rackup:-$directory_rackup}
     unicorn_user=${unicorn_user:-$directory_user}
     unicorn_config=${unicorn_config:-$directory_config}
     unicorn_init_config=${unicorn_init_config:-$directory_init_config}
     unicorn_bundle_gemfile=${unicorn_bundle_gemfile:-$directory_bundle_gemfile}
 
     command=${unicorn_command:-$directory_command}
+    command_args=${unicorn_command_args:-$directory_command_args}
     pidfile=${unicorn_pidfile:-$directory_pidfile}
   fi
 fi
@@ -162,7 +165,7 @@ required_files="${unicorn_config:-} ${unicorn_rackup:-}"
 [ -n "${unicorn_env}" ] && unicorn_flags="-E ${unicorn_env} ${unicorn_flags}"
 
 # Add our rackup file to the unicorn command_args
-[ -n "${unicorn_rackup:-}" ] && command_args="${unicorn_rackup:-}"
+[ -n "${unicorn_rackup:-}" ] && command_args="${unicorn_rackup:-} ${command_args:-}"
 
 # This function builds the command to start unicorn. This is split out so we can
 # print it from the "show" command
@@ -277,6 +280,7 @@ unicorn_show_command()
 
 command:        ${command}
 command_args:   ${command_args}
+rackup:         ${unicorn_rackup}
 pidfile:        ${pidfile}
 old_pidfile:    ${unicorn_old_pidfile}
 listen:         ${unicorn_listen}
