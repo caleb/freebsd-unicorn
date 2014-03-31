@@ -197,7 +197,7 @@ unicorn_start_command()
   fi
 
   # ensure that the command exists and is executable
-  if [ ! -x ${_chroot}${_chroot:+"/"}${command} ]; then
+  if [ ! -x "${_chroot}${_chroot:+/}${command}" ]; then
     warn "run_rc_command: cannot run $command"
     return 1
   fi
