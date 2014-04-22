@@ -93,8 +93,8 @@ This infers all sorts of information about your app (you can always run `/usr/lo
     command:        /u/application/current/bin/unicorn_rails
     command_args:   /u/application/current/config.ru
     rackup:         /u/application/current/config.ru
-    pidfile:        /u/application/shared/pids/unicorn.pid
-    old_pidfile:    /u/application/shared/pids/unicorn.pid.oldbin
+    pidfile:        /u/application/shared/tmp/pids/unicorn.pid
+    old_pidfile:    /u/application/shared/tmp/pids/unicorn.pid.oldbin
     listen:         
     config:         /u/application/current/config/unicorn.conf.rb
     init_config:    
@@ -117,7 +117,7 @@ Let's look at these settings one by one:
 
 `rackup`: This is the `rackup` file that unicorn uses. By default this is set to `current/config.ru` for capistrano projects.
 
-`pidfile`: This is also part of FreeBSD's `rc.subr` system. This is where the built in functions will look for the pid of the process. By default, this rc script looks in the `shared/pids/unicorn.pid` file.
+`pidfile`: This is also part of FreeBSD's `rc.subr` system. This is where the built in functions will look for the pid of the process. By default, this rc script looks in the `shared/tmp/pids/unicorn.pid` file.
 
 `old_pidfile`: This is the pidfile used by unicorn to perform zero-downtime upgrades. [Procedure to replace a running unicorn executable][unicorn-0-downtime]. This rc script uses Unicorn's default convention of appending `.oldbin` to the end of the `pidfile`
 
