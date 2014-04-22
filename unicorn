@@ -7,7 +7,7 @@
 . /etc/rc.subr
 
 name="unicorn"
-rcvar=`set_rcvar`
+rcvar="${name}_enable"
 procname="ruby"
 
 extra_commands="upgrade show reopenlogs"
@@ -50,11 +50,11 @@ _setup_directory()
 {
   local directory
   directory=$1
-  
-  directory_command="${directory}/current/bin/unicorn_rails"
-  directory_pidfile="${directory}/shared/pids/unicorn.pid"
+
+  directory_command="${directory}/current/bin/unicorn"
+  directory_pidfile="${directory}/shared/tmp/pids/unicorn.pid"
   directory_old_pidfile="${directory_pidfile}.oldbin"
-  directory_config="${directory}/current/config/unicorn.conf.rb"
+  directory_config="${directory}/current/config/unicorn.rb"
   directory_rackup="${directory}/current/config.ru"
   directory_init_config="${directory}/current/.env"
   directory_bundle_gemfile="${directory}/current/Gemfile"
@@ -82,7 +82,9 @@ if [ -n "$2" ]; then
   profile="$2"
 
   # set the rcvar for this specific profile
-  rcvar=`set_rcvar "${name}_${profile}"`
+  rcvar="${name}_${profile}_enable"
+  rcvar="${rcvar}"
+
   # if the user provides a directory, we can infer some default configuration
   directory=`_read_profile_var "${profile}" "directory"`
 
@@ -110,7 +112,7 @@ else
     # If we weren't started with a profile, run the command on all available profiles
     for profile in ${unicorn_profiles}; do
       # By default set the profile rcvar to no to suppress warnings by checkyesno
-      profile_rcvar=`set_rcvar "${name}_${profile}"`
+      profile_rcvar="${name}_${profile}_enable"
       eval "${profile_rcvar}=\${${profile_rcvar}:-'NO'}"
 
       if checkyesno ${profile_rcvar}; then
@@ -305,3 +307,4 @@ unicorn_reopenlogs_command()
 }
 
 run_rc_command "${1}"
+
